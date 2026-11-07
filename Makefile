@@ -7,13 +7,17 @@
 REPO_ROOT := $(realpath ..)
 BUILD_DIR := $(REPO_ROOT)/build/bootloader
 
-CROSS   := $(HOME)/opt/cross/bin/x86_64-elf-
-CC      := $(CROSS)gcc
-LD      := $(CROSS)ld
-OBJCOPY := objcopy
+# Tool locations are overridable via environment or command line, e.g.:
+#   make CROSS_PREFIX=/opt/axiome/cross/bin OBJCOPY=llvm-objcopy
+#   make EFI_PREFIX=/usr
+CROSS_PREFIX ?= $(HOME)/opt/cross/bin
+CROSS   ?= $(CROSS_PREFIX)/x86_64-elf-
+CC      ?= $(CROSS)gcc
+LD      ?= $(CROSS)ld
+OBJCOPY ?= objcopy
 
-EFI_INC := /usr/include/efi
-EFI_LIB := /usr/lib
+EFI_INC ?= /usr/include/efi
+EFI_LIB ?= /usr/lib
 
 CFLAGS  := -I$(REPO_ROOT)/include -I$(EFI_INC) -I$(EFI_INC)/x86_64
 # HAVE_USE_MS_ABI is mandatory: it makes EFIAPI expand to ms_abi so every
