@@ -11,13 +11,23 @@ BUILD_DIR := $(REPO_ROOT)/build/bootloader
 #   make CROSS_PREFIX=/opt/axiome/cross/bin OBJCOPY=llvm-objcopy
 #   make EFI_PREFIX=/usr
 CROSS_PREFIX ?= $(HOME)/opt/cross/bin
-CROSS   ?= $(CROSS_PREFIX)/x86_64-elf-
-CC      ?= $(CROSS)gcc
-LD      ?= $(CROSS)ld
-OBJCOPY ?= objcopy
+CROSS   := $(CROSS_PREFIX)/x86_64-elf-
+# Do not let make's built-in CC/LD defaults beat the cross tools: only a
+# command-line or environment override replaces them.
+ifeq ($(filter command line environment override,$(origin CC)),)
+CC := $(CROSS)gcc
+endif
+ifeq ($(filter command line environment override,$(origin LD)),)
+LD := $(CROSS)ld
+endif
+ifeq ($(filter command line environment override,$(origin OBJCOPY)),)
+OBJCOPY := objcopy
+endif
 
-EFI_INC ?= /usr/include/efi
-EFI_LIB ?= /usr/lib
+# gnu-efi install prefix (set by the nix dev shell, /usr on distro packages).
+EFI_PREFIX ?= /usr
+EFI_INC ?= $(EFI_PREFIX)/include/efi
+EFI_LIB ?= $(EFI_PREFIX)/lib
 
 CFLAGS  := -I$(REPO_ROOT)/include -I$(EFI_INC) -I$(EFI_INC)/x86_64
 # HAVE_USE_MS_ABI is mandatory: it makes EFIAPI expand to ms_abi so every
@@ -58,9 +68,9 @@ $(EFI_SO): $(OBJS)
 
 # Keep only the sections firmware needs; mark the image as an EFI app.
 $(EFI_BIN): $(EFI_SO)
-	$(OBJCOPY) -j .text -j .sdata -j .data -j .dynamic -j .dynsym \
-		-j .rel -j .rela -j .rel.* -j .rela.* -j .reloc \
-		--target=efi-app-x86_64 --subsystem=10 $^ $@
+	$(OBJCOPY) -j .text -j .rodata -j .sdata -j .data -j .dynamic \
+		-j .dynsym -j .rel -j .rela -j .rel.* -j .rela.* -j .reloc \
+		-I elf64-x86-64 -O efi-app-x86_64 --subsystem=10 $^ $@
 
 clean:
 	rm -rf $(BUILD_DIR)
