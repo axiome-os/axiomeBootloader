@@ -8,7 +8,7 @@
 #include "bootloader.h"
 #include "bootsplash.h"
 
-static void splash_surface(struct boot_ctx *ctx, struct splash_surface *s)
+void splash_surface(struct boot_ctx *ctx, struct splash_surface *s)
 {
     s->pixels = (uint8_t *)(UINTN)ctx->fb_addr;
     s->width = ctx->fb_width;

@@ -7,6 +7,7 @@
 #include <efilib.h>
 
 #include "axboot.h"
+#include "bootsplash.h"
 
 /* Number of pages reserved at AXBOOT_INFO_PHYS for struct axboot_info plus
    the inline mmap array (struct ~0.5KB + 64 entries * 24B ~= 2KB). */
@@ -73,6 +74,10 @@ EFI_STATUS gop_setup(struct boot_ctx *ctx);
 /* splash.c: logo + rounded progress bar drawn directly on the GOP scanout. */
 void splash_show(struct boot_ctx *ctx);
 void splash_set_progress(struct boot_ctx *ctx, UINT32 permille);
+void splash_surface(struct boot_ctx *ctx, struct splash_surface *s);
+
+/* input.c: wait for shift key to toggle debug mode. */
+int splash_wait_for_shift(struct boot_ctx *ctx);
 
 /* acpi.c */
 void acpi_find(struct boot_ctx *ctx);

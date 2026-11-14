@@ -129,7 +129,42 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     /* 2. Splash config + boot splash (GOP is live now).  The config also
        carries the kernel command line (debug mode etc.). */
     axboot_config_load(ctx);
+
+    /* Show splash first, then wait window on top of it. */
     splash_show(ctx);
+
+    /* 2a. Wait window: if user presses any key, enable debug=1. */
+    if (splash_wait_for_shift(ctx)) {
+        /* Replace or append debug=1 in cmdline.  We scan for "debug=" and
+           replace its value; if not found, append " debug=1". */
+        CHAR8 *p = (CHAR8 *)ctx->cmdline;
+        CHAR8 *debug_pos = NULL;
+        while (*p) {
+            if (p[0] == 'd' && p[1] == 'e' && p[2] == 'b' && p[3] == 'u' &&
+                p[4] == 'g' && p[5] == '=') {
+                debug_pos = p + 6;  /* points at value after "debug=" */
+                break;
+            }
+            p++;
+        }
+        if (debug_pos) {
+            /* Replace value with '1' */
+            *debug_pos = '1';
+        } else {
+            /* Append " debug=1" */
+            UINTN n = 0;
+            while (ctx->cmdline[n] && n < sizeof(ctx->cmdline) - 1)
+                n++;
+            if (n + 9 < sizeof(ctx->cmdline)) {
+                ctx->cmdline[n++] = ' ';
+                const char *add = "debug=1";
+                while (*add && n < sizeof(ctx->cmdline) - 1)
+                    ctx->cmdline[n++] = *add++;
+                ctx->cmdline[n] = 0;
+            }
+        }
+        bl_print("axboot: key pressed, debug=1 enabled\n");
+    }
 
     /* 3. ACPI RSDP / SMBIOS via the configuration table. */
     acpi_find(ctx);

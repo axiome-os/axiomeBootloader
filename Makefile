@@ -49,7 +49,7 @@ LDFLAGS := -nostdlib -znocombreloc -z noexecstack
 LDFLAGS += -T $(EFI_LIB)/elf_x86_64_efi.lds -shared -Bsymbolic
 LDFLAGS += -L$(EFI_LIB)
 
-SRCS := main.c gop.c acpi.c fs.c elf.c mmap.c boot.c splash.c
+SRCS := main.c gop.c acpi.c fs.c elf.c mmap.c boot.c splash.c input.c
 OBJS := $(patsubst %.c,$(BUILD_DIR)/%.o,$(SRCS))
 
 EFI_SO  := $(BUILD_DIR)/BOOTX64.so
