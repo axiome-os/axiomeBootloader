@@ -126,36 +126,45 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
         bl_print("\n");
     }
 
-    /* 2. ACPI RSDP / SMBIOS via the configuration table. */
+    /* 2. Splash config + boot splash (GOP is live now).  The config also
+       carries the kernel command line (debug mode etc.). */
+    axboot_config_load(ctx);
+    splash_show(ctx);
+
+    /* 3. ACPI RSDP / SMBIOS via the configuration table. */
     acpi_find(ctx);
+    splash_set_progress(ctx, 80);
     bl_print("axboot: ACPI RSDP=");
     bl_print_hex(ctx->acpi_rsdp);
     bl_print(" SMBIOS=");
     bl_print_hex(ctx->smbios);
     bl_print("\n");
 
-    /* 3. Load \kernel.elf from our own ESP. */
+    /* 4. Load \kernel.elf from our own ESP. */
     status = fs_load_kernel(ctx);
     if (EFI_ERROR(status))
     {
         bl_fatal("cannot load \\kernel.elf from ESP");
         return status;
     }
+    splash_set_progress(ctx, 140);
     bl_print("axboot: kernel.elf bytes=");
     print_dec(ctx->file_size);
     bl_print("\n");
 
-    /* 4. Place PT_LOAD segments at p_paddr. */
+    /* 5. Place PT_LOAD segments at p_paddr. */
     status = elf_load(ctx);
     if (EFI_ERROR(status))
     {
         bl_fatal("ELF load failed");
         return status;
     }
+    splash_set_progress(ctx, 170);
     /* The staging file buffer is no longer needed; free it before the
        final GetMemoryMap so the EBS key stays valid. */
     ctx->bs->FreePool(ctx->file_data);
     ctx->file_data = NULL;
+    splash_set_progress(ctx, 190);
 
     bl_print("axboot: kernel entry=");
     bl_print_hex(ctx->kern_entry);
@@ -165,7 +174,7 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     bl_print_hex(ctx->kern_size);
     bl_print("\n");
 
-    /* 5. Reserve the fixed bootinfo region. */
+    /* 6. Reserve the fixed bootinfo region. */
     addr = (EFI_PHYSICAL_ADDRESS)AXBOOT_INFO_PHYS;
     status = ctx->bs->AllocatePages(AllocateAddress, EfiLoaderData,
                                     BOOTINFO_PAGES, &addr);
@@ -180,7 +189,7 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     ctx->info_pages = BOOTINFO_PAGES;
     info = (struct axboot_info *)(UINTN)addr;
 
-    /* 6. Loader page tables + handoff stack, allocated here so the final
+    /* 7. Loader page tables + handoff stack, allocated here so the final
        memory map already contains them. Page count covers PML4 + PDPT_lo
        + one PD per identity GiB + PDPT_hi + PD_kern. */
     {
@@ -222,7 +231,7 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     ctx->stack_phys = (UINT64)addr;
     ctx->stack_pages = pages;
 
-    /* 7. Final memory map + axboot_info fill. */
+    /* 8. Final memory map + axboot_info fill. */
     status = mmap_build(ctx, info);
     if (EFI_ERROR(status))
     {
@@ -234,8 +243,9 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     bl_print(" bootinfo=");
     bl_print_hex((UINT64)(UINTN)info);
     bl_print("\n");
+    splash_set_progress(ctx, 220);
 
-    /* 8. Page tables (pure stores into already-allocated pages; the EBS
+    /* 9. Page tables (pure stores into already-allocated pages; the EBS
        key stays valid). */
     status = boot_tables_build(ctx);
     if (EFI_ERROR(status))
@@ -243,8 +253,9 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
         bl_fatal("page table build failed");
         return status;
     }
+    splash_set_progress(ctx, 250);
 
-    /* 9. Point of no return. Retry once if the map changed under us. */
+    /* 10. Point of no return. Retry once if the map changed under us. */
     for (int attempt = 0; attempt < 3; attempt++)
     {
         status = ctx->bs->ExitBootServices(ImageHandle, ctx->memmap_key);
@@ -274,7 +285,7 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
         return status;
     }
 
-    /* 10. 64-bit handoff. No boot-services calls beyond this point
+    /* 11. 64-bit handoff. No boot-services calls beyond this point
        (serial port writes are direct hardware and still work). */
     boot_handoff(ctx->kern_entry, (UINT64)(UINTN)info,
                  ctx->stack_phys + ctx->stack_pages * 4096ULL,

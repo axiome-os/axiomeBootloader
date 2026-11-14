@@ -234,6 +234,10 @@ mmap_build(struct boot_ctx *ctx, struct axboot_info *info)
         info->boot_disk_part = 0;
 
         info->cmdline[0] = 0;
+        for (UINTN i = 0; i + 1 < sizeof(info->cmdline) &&
+                          ctx->cmdline[i]; i++)
+            info->cmdline[i] = ctx->cmdline[i];
+        info->cmdline[sizeof(info->cmdline) - 1] = 0;
         (void)max_addr;
     }
 

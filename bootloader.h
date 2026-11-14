@@ -29,6 +29,11 @@ struct boot_ctx {
     UINT32 fb_pf; /* enum axboot_pixel_format */
     int    fb_valid;
 
+    /* Boot splash + kernel command line from \axboot.cfg */
+    int      splash_enabled;
+    UINT32   splash_progress; /* 0..1000 */
+    char     cmdline[256];
+
     /* ACPI / SMBIOS (physical addresses, 0 if absent) */
     UINT64 acpi_rsdp;
     UINT64 smbios;
@@ -65,11 +70,18 @@ void bl_fatal(const char *msg);
 /* gop.c */
 EFI_STATUS gop_setup(struct boot_ctx *ctx);
 
+/* splash.c: logo + rounded progress bar drawn directly on the GOP scanout. */
+void splash_show(struct boot_ctx *ctx);
+void splash_set_progress(struct boot_ctx *ctx, UINT32 permille);
+
 /* acpi.c */
 void acpi_find(struct boot_ctx *ctx);
 
-/* fs.c: load \kernel.elf from the ESP we were launched from. */
+/* fs.c: load \kernel.elf (and optional \axboot.cfg) from the ESP. */
 EFI_STATUS fs_load_kernel(struct boot_ctx *ctx);
+EFI_STATUS fs_load_file(struct boot_ctx *ctx, const CHAR16 *name,
+                        UINT8 **data, UINTN *size);
+void axboot_config_load(struct boot_ctx *ctx);
 
 /* elf.c: place PT_LOAD segments at p_paddr, report entry/geometry. */
 EFI_STATUS elf_load(struct boot_ctx *ctx);
