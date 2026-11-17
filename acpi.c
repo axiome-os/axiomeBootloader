@@ -18,24 +18,24 @@ acpi_find(struct boot_ctx *ctx)
 
     for (UINTN i = 0; i < n; i++)
     {
-        if (!CompareGuid(&ct[i].VendorGuid, &g_acpi20))
+        if (CompareGuid(&ct[i].VendorGuid, &g_acpi20))
         {
             ctx->acpi_rsdp = (UINT64)(UINTN)ct[i].VendorTable;
             continue;
         }
-        if (!CompareGuid(&ct[i].VendorGuid, &g_acpi))
+        if (CompareGuid(&ct[i].VendorGuid, &g_acpi))
         {
             /* Prefer ACPI 2.0; keep 1.0 only as a fallback. */
             if (ctx->acpi_rsdp == 0)
                 ctx->acpi_rsdp = (UINT64)(UINTN)ct[i].VendorTable;
             continue;
         }
-        if (!CompareGuid(&ct[i].VendorGuid, &g_smbios3))
+        if (CompareGuid(&ct[i].VendorGuid, &g_smbios3))
         {
             ctx->smbios = (UINT64)(UINTN)ct[i].VendorTable;
             continue;
         }
-        if (!CompareGuid(&ct[i].VendorGuid, &g_smbios))
+        if (CompareGuid(&ct[i].VendorGuid, &g_smbios))
         {
             if (ctx->smbios == 0)
                 ctx->smbios = (UINT64)(UINTN)ct[i].VendorTable;
